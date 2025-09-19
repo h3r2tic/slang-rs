@@ -1,7 +1,7 @@
 use super::{
 	EntryPoint, Function, Generic, Type, TypeLayout, TypeParameter, Variable, VariableLayout, rcall,
 };
-use crate::{GenericArg, GenericArgType, LayoutRules, sys};
+use crate::{Blob, GenericArg, GenericArgType, IUnknown, LayoutRules, succeeded, sys};
 
 #[repr(transparent)]
 pub struct Shader(sys::SlangReflection);
@@ -152,5 +152,18 @@ impl Shader {
 
 	pub fn global_params_var_layout(&self) -> Option<&VariableLayout> {
 		rcall!(spReflection_getGlobalParamsVarLayout(self) as Option<&VariableLayout>)
+	}
+
+	pub fn to_json(&self) -> crate::Result<Blob> {
+		let mut blob = std::ptr::null_mut();
+		let result = rcall!(spReflection_ToJson(self, std::ptr::null_mut(), &mut blob));
+
+		if succeeded(result) && !blob.is_null() {
+			Ok(Blob(IUnknown(
+				std::ptr::NonNull::new(blob as *mut _).unwrap(),
+			)))
+		} else {
+			Err(crate::Error::Code(result))
+		}
 	}
 }
