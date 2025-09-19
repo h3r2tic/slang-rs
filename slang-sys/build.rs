@@ -3,36 +3,15 @@ extern crate bindgen;
 use std::env;
 
 fn main() {
-	println!("cargo:rerun-if-env-changed=SLANG_DIR");
-	println!("cargo:rerun-if-env-changed=SLANG_INCLUDE_DIR");
-	println!("cargo:rerun-if-env-changed=SLANG_LIB_DIR");
-	println!("cargo:rerun-if-env-changed=VULKAN_SDK");
+	let include_dir = "./slang/include";
 
-	let include_dir = if let Ok(dir) = env::var("SLANG_INCLUDE_DIR") {
-		dir
-	} else if let Ok(dir) = env::var("SLANG_DIR") {
-		format!("{dir}/include")
-	} else if let Ok(dir) = env::var("VULKAN_SDK") {
-		format!("{dir}/include/slang")
-	} else {
-		panic!("The environment variable SLANG_INCLUDE_DIR, SLANG_DIR, or VULKAN_SDK must be set");
-	};
-
-	let lib_dir = if let Ok(dir) = env::var("SLANG_LIB_DIR") {
-		dir
-	} else if let Ok(dir) = env::var("SLANG_DIR") {
-		format!("{dir}/lib")
-	} else if let Ok(dir) = env::var("VULKAN_SDK") {
-		format!("{dir}/lib")
-	} else {
-		panic!("The environment variable SLANG_LIB_DIR, SLANG_DIR, or VULKAN_SDK must be set");
-	};
-
-	if !lib_dir.is_empty() {
-		println!("cargo:rustc-link-search=native={lib_dir}");
-	}
-
-	println!("cargo:rustc-link-lib=dylib=slang");
+	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-unknown-linux-gnu");
+	println!("cargo:rustc-link-lib=static=slang");
+	println!("cargo:rustc-link-lib=static=compiler-core");
+	println!("cargo:rustc-link-lib=static=core");
+	println!("cargo:rustc-link-lib=static=miniz");
+	println!("cargo:rustc-link-lib=static=lz4");
+	println!("cargo:rustc-link-lib=stdc++");
 
 	let out_dir = env::var("OUT_DIR").expect("Couldn't determine output directory.");
 
