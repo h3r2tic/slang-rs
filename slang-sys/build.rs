@@ -5,12 +5,19 @@ use std::env;
 fn main() {
 	let include_dir = "./slang/include";
 
+	#[cfg(target_os = "linux")]
 	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-unknown-linux-gnu");
+
+	#[cfg(target_os = "windows")]
+	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-pc-windows-msvc");
+
 	println!("cargo:rustc-link-lib=static=slang");
 	println!("cargo:rustc-link-lib=static=compiler-core");
 	println!("cargo:rustc-link-lib=static=core");
 	println!("cargo:rustc-link-lib=static=miniz");
 	println!("cargo:rustc-link-lib=static=lz4");
+
+	#[cfg(not(target_os = "windows"))]
 	println!("cargo:rustc-link-lib=stdc++");
 
 	let out_dir = env::var("OUT_DIR").expect("Couldn't determine output directory.");

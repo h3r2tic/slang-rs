@@ -31,6 +31,8 @@ WORKDIR /workspace/slang
 
 # Check out specific version
 RUN git checkout 391d35d63e83293855180b1cce061ca6b73a8b56
+RUN git submodule sync
+RUN git submodule update --init --recursive
 
 RUN cmake -B build -G Ninja \
     -DSLANG_LIB_TYPE=STATIC \
