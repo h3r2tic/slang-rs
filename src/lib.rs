@@ -1,5 +1,6 @@
 //! Rust bindings for the Slang shader language compiler
 
+mod file_system;
 pub mod reflection;
 
 #[cfg(test)]
@@ -24,6 +25,8 @@ pub use sys::{
 	SlangTypeKind as TypeKind, SlangUUID as UUID, slang_CompilerOptionName as CompilerOptionName,
 	slang_Modifier as Modifier,
 };
+
+pub use file_system::*;
 
 macro_rules! vcall {
 	($self:expr, $method:ident($($args:expr),*)) => {
@@ -169,6 +172,14 @@ unsafe impl Interface for Blob {
 }
 
 impl Blob {
+	pub fn new(data: &[u8]) -> Self {
+		unsafe {
+			let blob: *mut shader_slang_sys::ISlangBlob =
+				sys::slang_createBlob(data.as_ptr().cast(), data.len());
+			Blob(IUnknown(std::ptr::NonNull::new(blob.cast()).unwrap()))
+		}
+	}
+
 	pub fn as_slice(&self) -> &[u8] {
 		let ptr = vcall!(self, getBufferPointer());
 		let size = vcall!(self, getBufferSize());
@@ -636,6 +647,16 @@ impl Module {
 		let ptr = vcall!(self, getModuleReflection());
 		unsafe { &*(ptr as *const _) }
 	}
+
+	pub fn serialize(&self) -> Option<Box<[u8]>> {
+		let mut blob = std::ptr::null_mut();
+		if succeeded(vcall!(self, serialize(&raw mut blob))) {
+			let blob = Blob(IUnknown(std::ptr::NonNull::new(blob.cast()).unwrap()));
+			Some(blob.as_slice().into())
+		} else {
+			None
+		}
+	}
 }
 
 #[repr(transparent)]
@@ -724,6 +745,29 @@ impl<'a> SessionDesc<'a> {
 	pub fn options(mut self, options: &'a CompilerOptions) -> Self {
 		self.inner.compilerOptionEntries = options.options.as_ptr() as _;
 		self.inner.compilerOptionEntryCount = options.options.len() as _;
+		self
+	}
+
+	pub fn file_system(mut self, file_system: Box<dyn FileSystem>) -> Self {
+		let file_system: &mut file_system::FileSystemImpl =
+			Box::leak(Box::new(file_system::FileSystemImpl::new(file_system)));
+
+		let file_system: *mut shader_slang_sys::ISlangFileSystem =
+			(file_system as *mut file_system::FileSystemImpl).cast();
+
+		self.inner.fileSystem = file_system;
+		self
+	}
+
+	pub fn file_system_ext(mut self, file_system_ext: Box<dyn FileSystemExt>) -> Self {
+		let file_system: &mut file_system::FileSystemExtImpl = Box::leak(Box::new(
+			file_system::FileSystemExtImpl::new(file_system_ext),
+		));
+
+		let file_system: *mut shader_slang_sys::ISlangFileSystem =
+			(file_system as *mut file_system::FileSystemExtImpl).cast();
+
+		self.inner.fileSystem = file_system;
 		self
 	}
 }
