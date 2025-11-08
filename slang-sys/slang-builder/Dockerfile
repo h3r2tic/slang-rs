@@ -4,21 +4,31 @@ FROM ubuntu:20.04
 # Set the environment variable to avoid interactive prompts during the build
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install required packages and add Kitware's APT repository for the latest CMake
+# Base utilities needed for adding repos
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    ca-certificates \
+    gnupg \
+    wget \
+ && rm -rf /var/lib/apt/lists/*
+
+# Add repos: Toolchain PPA (GCC 13) and Kitware (new CMake)
+RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
+RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
+
+# Install CMake (new), then compilers, then common build tools
+RUN apt-get update && apt-get install -y cmake \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y \
+    gcc-13 g++-13 \
+ && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && apt-get install -y \
     git \
     ninja-build \
-    clang \
-    libstdc++-10-dev \
-    python3 \
-    python3-pip \
-    wget \
-    gpg \
-    software-properties-common \
-    && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add - \
-    && apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
-    && apt-get update && apt-get install -y cmake \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
 # Set up a directory for the build
 WORKDIR /workspace
@@ -30,11 +40,15 @@ RUN git clone https://github.com/shader-slang/slang --recursive --single-branch 
 WORKDIR /workspace/slang
 
 # Check out specific version
-RUN git checkout 391d35d63e83293855180b1cce061ca6b73a8b56
+# v2025.21.2; many versions prior to this ship with broken IR deserialization
+RUN git checkout 6bf200902e5dc2ae2517303efae2a1ad2c36b04d
 RUN git submodule sync
 RUN git submodule update --init --recursive
 
 RUN cmake -B build -G Ninja \
+    -DCMAKE_C_COMPILER=/usr/bin/gcc-13 \
+    -DCMAKE_CXX_COMPILER=/usr/bin/g++-13 \
+    -DCMAKE_CXX_STANDARD=20 \
     -DSLANG_LIB_TYPE=STATIC \
     -DSLANG_ENABLE_DXIL=0 \
     -DSLANG_ENABLE_SLANGD=0 \

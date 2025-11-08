@@ -11,7 +11,7 @@ fn main() {
 	#[cfg(target_os = "windows")]
 	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-pc-windows-msvc");
 
-	println!("cargo:rustc-link-lib=static=slang");
+	println!("cargo:rustc-link-lib=static=slang-compiler");
 	println!("cargo:rustc-link-lib=static=compiler-core");
 	println!("cargo:rustc-link-lib=static=core");
 	println!("cargo:rustc-link-lib=static=miniz");

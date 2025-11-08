@@ -18,7 +18,7 @@ mkdir -p ../slang/lib/x86_64-unknown-linux-gnu
 
 # Copy the build artifacts from the container to the host machine
 # The paths inside the container are relative to the container's file system
-docker cp $container_id:/workspace/slang/build/Release/lib/libslang.a ../slang/lib/x86_64-unknown-linux-gnu/
+docker cp $container_id:/workspace/slang/build/Release/lib/libslang-compiler.a ../slang/lib/x86_64-unknown-linux-gnu/
 docker cp $container_id:/workspace/slang/build/Release/lib/libcompiler-core.a ../slang/lib/x86_64-unknown-linux-gnu/
 docker cp $container_id:/workspace/slang/build/Release/lib/libcore.a ../slang/lib/x86_64-unknown-linux-gnu/
 docker cp $container_id:/workspace/slang/build/external/miniz/libminiz.a ../slang/lib/x86_64-unknown-linux-gnu/
