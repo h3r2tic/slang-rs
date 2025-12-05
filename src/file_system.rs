@@ -4,7 +4,10 @@ use std::{
 	ffi::{CStr, CString, c_char, c_void},
 	mem, ptr, slice,
 	str::FromStr,
-	sync::atomic::{AtomicU32, Ordering},
+	sync::{
+		Arc,
+		atomic::{AtomicU32, Ordering},
+	},
 };
 
 use crate::{self as slang, Interface as _};
@@ -131,7 +134,7 @@ struct ISlangFileSystemVtable {
 pub(crate) struct FileSystemImpl {
 	vtable: *const ISlangFileSystemVtable,
 	ref_count: AtomicU32,
-	inner: Box<dyn FileSystem>,
+	inner: Arc<dyn FileSystem>,
 }
 
 impl FileSystemImpl {
@@ -146,7 +149,7 @@ impl FileSystemImpl {
 	};
 
 	#[inline]
-	pub(crate) fn new(inner: Box<dyn FileSystem>) -> Self {
+	pub(crate) fn new(inner: Arc<dyn FileSystem>) -> Self {
 		Self {
 			vtable: &Self::VTABLE,
 			ref_count: AtomicU32::new(1),
@@ -276,7 +279,7 @@ struct ISlangFileSystemExtVtable {
 pub(crate) struct FileSystemExtImpl {
 	vtable: *const ISlangFileSystemExtVtable,
 	ref_count: AtomicU32,
-	inner: Box<dyn FileSystemExt>,
+	inner: Arc<dyn FileSystemExt>,
 }
 
 impl FileSystemExtImpl {
@@ -300,7 +303,7 @@ impl FileSystemExtImpl {
 	};
 
 	#[inline]
-	pub(crate) fn new(inner: Box<dyn FileSystemExt>) -> Self {
+	pub(crate) fn new(inner: Arc<dyn FileSystemExt>) -> Self {
 		Self {
 			vtable: &Self::VTABLE,
 			ref_count: AtomicU32::new(1),

@@ -9,6 +9,7 @@ mod tests;
 use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::ptr::{null, null_mut};
+use std::sync::Arc;
 
 pub(crate) use shader_slang_sys as sys;
 
@@ -748,7 +749,7 @@ impl<'a> SessionDesc<'a> {
 		self
 	}
 
-	pub fn file_system(mut self, file_system: Box<dyn FileSystem>) -> Self {
+	pub fn file_system(mut self, file_system: Arc<dyn FileSystem>) -> Self {
 		let file_system: &mut file_system::FileSystemImpl =
 			Box::leak(Box::new(file_system::FileSystemImpl::new(file_system)));
 
@@ -759,7 +760,7 @@ impl<'a> SessionDesc<'a> {
 		self
 	}
 
-	pub fn file_system_ext(mut self, file_system_ext: Box<dyn FileSystemExt>) -> Self {
+	pub fn file_system_ext(mut self, file_system_ext: Arc<dyn FileSystemExt>) -> Self {
 		let file_system: &mut file_system::FileSystemExtImpl = Box::leak(Box::new(
 			file_system::FileSystemExtImpl::new(file_system_ext),
 		));
