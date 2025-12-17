@@ -1,5 +1,5 @@
 use super::{Function, Generic, Type, Variable, rcall};
-use crate::{DeclKind, sys};
+use crate::{DeclKind, Modifier, ModifierID, sys};
 
 #[repr(transparent)]
 pub struct Decl(sys::SlangReflectionDecl);
@@ -44,5 +44,9 @@ impl Decl {
 
 	pub fn parent(&self) -> Option<&Decl> {
 		rcall!(spReflectionDecl_getParent(self) as Option<&Decl>)
+	}
+
+	pub fn find_modifier(&self, id: ModifierID) -> Option<&Modifier> {
+		rcall!(spReflectionDecl_findModifier(self, id) as Option<&Modifier>)
 	}
 }
