@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     gnupg \
     wget \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Add repos: Toolchain PPA (GCC 13) and Kitware (new CMake)
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
@@ -19,29 +19,28 @@ RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
 
 # Install CMake (new), then compilers, then common build tools
 RUN apt-get update && apt-get install -y cmake \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
     gcc-13 g++-13 \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
     git \
     ninja-build \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Set up a directory for the build
 WORKDIR /workspace
 
 # Clone the repo
-RUN git clone https://github.com/shader-slang/slang --recursive --single-branch --branch master
+RUN git clone https://github.com/h3r2tic/slang.git --recursive --single-branch --branch fix/link-time-entrypoint-layout
 
 # Move into the project directory
 WORKDIR /workspace/slang
 
 # Check out specific version
-# v2025.21.2; many versions prior to this ship with broken IR deserialization
-RUN git checkout 6bf200902e5dc2ae2517303efae2a1ad2c36b04d
+RUN git checkout efb4a77ca6c4a5db3ce760a0b6ecd041b05f92e3
 RUN git submodule sync
 RUN git submodule update --init --recursive
 
