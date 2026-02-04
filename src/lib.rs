@@ -702,6 +702,11 @@ impl<'a> TargetDesc<'a> {
 		self.inner.compilerOptionEntryCount = options.options.len() as _;
 		self
 	}
+
+	pub fn glsl_scalar_buffer_layout(mut self, value: bool) -> Self {
+		self.inner.forceGLSLScalarBufferLayout = value;
+		self
+	}
 }
 
 #[repr(transparent)]
