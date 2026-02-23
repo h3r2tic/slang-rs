@@ -1,15 +1,18 @@
 extern crate bindgen;
 
-use std::env;
+use std::{env, path::PathBuf};
 
 fn main() {
-	let include_dir = "./slang/include";
+	let manifest_dir =
+		PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
 
 	#[cfg(target_os = "linux")]
-	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-unknown-linux-gnu");
+	let lib_dir = manifest_dir.join("slang/lib/x86_64-unknown-linux-gnu");
 
 	#[cfg(target_os = "windows")]
-	println!("cargo:rustc-link-search=native=./slang/lib/x86_64-pc-windows-msvc");
+	let lib_dir = manifest_dir.join("slang/lib/x86_64-pc-windows-msvc");
+
+	println!("cargo:rustc-link-search=native={}", lib_dir.display());
 
 	println!("cargo:rustc-link-lib=static=slang-compiler");
 	println!("cargo:rustc-link-lib=static=compiler-core");
@@ -21,6 +24,7 @@ fn main() {
 	println!("cargo:rustc-link-lib=stdc++");
 
 	let out_dir = env::var("OUT_DIR").expect("Couldn't determine output directory.");
+	let include_dir = "./slang/include";
 
 	bindgen::builder()
 		.header(format!("{include_dir}/slang.h").as_str())
