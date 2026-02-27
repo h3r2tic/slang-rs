@@ -1,6 +1,6 @@
-git clone https://github.com/shader-slang/slang --recursive --single-branch --branch master
+git clone https://github.com/h3r2tic/slang.git --recursive --single-branch --branch fixes
 cd slang
-git checkout efb4a77ca6c4a5db3ce760a0b6ecd041b05f92e3
+git checkout 1b4db085
 git submodule sync
 git submodule update --init --recursive
 cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DSLANG_LIB_TYPE=STATIC -DSLANG_ENABLE_DXIL=0 -DSLANG_ENABLE_SLANGD=0 -DSLANG_ENABLE_SLANGI=0 -DSLANG_ENABLE_SLANGRT=0 -DSLANG_ENABLE_SLANG_GLSLANG=0 -DSLANG_ENABLE_TESTS=0 -DSLANG_ENABLE_RELEASE_DEBUG_INFO=0 -DSLANG_ENABLE_EXAMPLES=0 -DSLANG_ENABLE_SLANG_RHI=0 -DSLANG_SLANG_LLVM_FLAVOR=DISABLE

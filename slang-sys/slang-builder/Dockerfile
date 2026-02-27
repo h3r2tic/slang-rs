@@ -1,31 +1,15 @@
-# Use a base image with the necessary tools
-FROM ubuntu:20.04
+# Use a modern Ubuntu LTS base with up-to-date build tooling
+FROM ubuntu:24.04
 
 # Set the environment variable to avoid interactive prompts during the build
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Base utilities needed for adding repos
+# Install build dependencies from Ubuntu's native repositories
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
     ca-certificates \
-    gnupg \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Add repos: Toolchain PPA (GCC 13) and Kitware (new CMake)
-RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
-RUN apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main'
-
-# Install CMake (new), then compilers, then common build tools
-RUN apt-get update && apt-get install -y cmake \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y \
-    gcc-13 g++-13 \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN apt-get update && apt-get install -y \
+    cmake \
+    g++ \
+    gcc \
     git \
     ninja-build \
     && rm -rf /var/lib/apt/lists/*
@@ -34,19 +18,17 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /workspace
 
 # Clone the repo
-RUN git clone https://github.com/h3r2tic/slang.git --recursive --single-branch --branch fix/link-time-entrypoint-layout
+RUN git clone https://github.com/h3r2tic/slang.git --recursive --single-branch --branch fixes
 
 # Move into the project directory
 WORKDIR /workspace/slang
 
 # Check out specific version
-RUN git checkout efb4a77ca6c4a5db3ce760a0b6ecd041b05f92e3
+RUN git checkout 1b4db085
 RUN git submodule sync
 RUN git submodule update --init --recursive
 
 RUN cmake -B build -G Ninja \
-    -DCMAKE_C_COMPILER=/usr/bin/gcc-13 \
-    -DCMAKE_CXX_COMPILER=/usr/bin/g++-13 \
     -DCMAKE_CXX_STANDARD=20 \
     -DSLANG_LIB_TYPE=STATIC \
     -DSLANG_ENABLE_DXIL=0 \
