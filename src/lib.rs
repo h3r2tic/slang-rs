@@ -209,31 +209,39 @@ unsafe impl Interface for GlobalSession {
 impl GlobalSession {
 	pub fn new() -> Option<GlobalSession> {
 		let mut global_session = null_mut();
-		unsafe { sys::slang_createGlobalSession(sys::SLANG_API_VERSION as _, &mut global_session) };
-		Some(GlobalSession(IUnknown(std::ptr::NonNull::new(
-			global_session as *mut _,
-		)?)))
+		let result = unsafe {
+			sys::slang_createGlobalSession(sys::SLANG_API_VERSION as _, &mut global_session)
+		};
+		if !succeeded(result) {
+			return None;
+		}
+		let gs = GlobalSession(IUnknown(std::ptr::NonNull::new(global_session as *mut _)?));
+		Some(gs)
 	}
 
 	pub fn new_without_core_module() -> Option<GlobalSession> {
 		let mut global_session = null_mut();
-		unsafe {
+		let result = unsafe {
 			sys::slang_createGlobalSessionWithoutCoreModule(
 				sys::SLANG_API_VERSION as _,
 				&mut global_session,
 			)
 		};
-		Some(GlobalSession(IUnknown(std::ptr::NonNull::new(
-			global_session as *mut _,
-		)?)))
+		if !succeeded(result) {
+			return None;
+		}
+		let gs = GlobalSession(IUnknown(std::ptr::NonNull::new(global_session as *mut _)?));
+		Some(gs)
 	}
 
 	pub fn create_session(&self, desc: &SessionDesc) -> Option<Session> {
 		let mut session = null_mut();
-		vcall!(self, createSession(&**desc, &mut session));
-		Some(Session(IUnknown(std::ptr::NonNull::new(
-			session as *mut _,
-		)?)))
+		let result = vcall!(self, createSession(&**desc, &mut session));
+		if !succeeded(result) {
+			return None;
+		}
+		let s = Session(IUnknown(std::ptr::NonNull::new(session as *mut _)?));
+		Some(s)
 	}
 
 	pub fn find_profile(&self, name: &str) -> ProfileID {

@@ -6,7 +6,7 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 use std::ffi::{c_char, c_int, c_void};
 
-// Based on Slang version 2024.14.5
+// Based on Slang vtable layout in bundled slang/include/slang.h
 
 #[repr(C)]
 pub struct ICastableVtable {
@@ -54,7 +54,10 @@ pub struct IGlobalSessionVtable {
 	pub getCompilerElapsedTime: unsafe extern "C" fn(*mut c_void, outTotalTime: *mut f64, outDownstreamTime: *mut f64),
 	pub setSPIRVCoreGrammar: unsafe extern "C" fn(*mut c_void, jsonPath: *const c_char) -> SlangResult,
 	pub parseCommandLineArguments: unsafe extern "C" fn(*mut c_void, argc: c_int, argv: *const *const c_char, outSessionDesc: *mut slang_SessionDesc, outAuxAllocation: *mut *mut ISlangUnknown) -> SlangResult,
-	pub getSessionDescDigest: unsafe extern "C" fn(*mut c_void, sessionDesc: *const slang_SessionDesc, outBlob: *mut *mut ISlangBlob) -> SlangResult,
+	pub getSessionDescDigest: unsafe extern "C" fn(*mut c_void, sessionDesc: *mut slang_SessionDesc, outBlob: *mut *mut ISlangBlob) -> SlangResult,
+	pub compileBuiltinModule: unsafe extern "C" fn(*mut c_void, module: slang_BuiltinModuleName, flags: slang_CompileCoreModuleFlags) -> SlangResult,
+	pub loadBuiltinModule: unsafe extern "C" fn(*mut c_void, module: slang_BuiltinModuleName, moduleData: *const c_void, sizeInBytes: usize) -> SlangResult,
+	pub saveBuiltinModule: unsafe extern "C" fn(*mut c_void, module: slang_BuiltinModuleName, archiveType: SlangArchiveType, outBlob: *mut *mut ISlangBlob) -> SlangResult,
 }
 
 #[repr(C)]
@@ -79,6 +82,8 @@ pub struct ISessionVtable {
 	pub getLoadedModule: unsafe extern "C" fn(*mut c_void, index: SlangInt) -> *mut slang_IModule,
 	pub isBinaryModuleUpToDate: unsafe extern "C" fn(*mut c_void, modulePath: *const c_char, binaryModuleBlob: *mut ISlangBlob) -> bool,
 	pub loadModuleFromSourceString: unsafe extern "C" fn(*mut c_void, moduleName: *const c_char, path: *const c_char, string: *const c_char, outDiagnostics: *mut *mut ISlangBlob) -> *mut slang_IModule,
+	pub getDynamicObjectRTTIBytes: unsafe extern "C" fn(*mut c_void, type_: *mut slang_TypeReflection, interfaceType: *mut slang_TypeReflection, outRTTIDataBuffer: *mut u32, bufferSizeInBytes: u32) -> SlangResult,
+	pub loadModuleInfoFromIRBlob: unsafe extern "C" fn(*mut c_void, source: *mut ISlangBlob, outModuleVersion: *mut SlangInt, outModuleCompilerVersion: *mut *const c_char, outModuleName: *mut *const c_char) -> SlangResult,
 }
 
 #[repr(C)]
@@ -136,4 +141,5 @@ pub struct IModuleVtable {
 	pub getDependencyFileCount: unsafe extern "C" fn(*mut c_void) -> SlangInt32,
 	pub getDependencyFilePath: unsafe extern "C" fn(*mut c_void, index: SlangInt32) -> *const c_char,
 	pub getModuleReflection: unsafe extern "C" fn(*mut c_void) -> *mut slang_DeclReflection,
+	pub disassemble: unsafe extern "C" fn(*mut c_void, outDisassembledBlob: *mut *mut ISlangBlob) -> SlangResult,
 }

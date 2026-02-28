@@ -9,10 +9,14 @@ cmake --build build --parallel
 rem The regular install process fails, so let's just grab the libs we need.
 rem cmake --install build --prefix ../slang-install
 
+rmdir /s /q ..\..\slang\lib\x86_64-pc-windows-msvc
 mkdir ..\..\slang\lib\x86_64-pc-windows-msvc
-copy build\Release\lib\*.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\external\miniz\miniz.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+rem copy build\Release\lib\*.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+copy build\Release\lib\compiler-core.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+copy build\Release\lib\core.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+copy build\Release\lib\slang-compiler.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
 copy build\external\lz4\build\cmake\lz4.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+copy build\external\miniz\miniz.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
 
 cd ..
 rmdir /s /q slang

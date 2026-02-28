@@ -3,6 +3,7 @@
 use std::{
 	ffi::{CStr, CString, c_char, c_void},
 	mem, ptr, slice,
+	panic::{self, AssertUnwindSafe},
 	str::FromStr,
 	sync::{
 		Arc,
@@ -64,7 +65,7 @@ pub enum OSPathKind {
 }
 
 type FileSystemContentsCallBack =
-	unsafe extern "C" fn(path_type: SlangPathType, name: *const c_char, user_data: *const c_void);
+	unsafe extern "C" fn(path_type: SlangPathType, name: *const c_char, user_data: *mut c_void);
 
 pub trait FileSystem: Send {
 	fn load_file(&self, path: &str) -> std::io::Result<Box<[u8]>>;
@@ -111,10 +112,10 @@ struct Castable(slang::IUnknown);
 unsafe impl slang::Interface for Castable {
 	type Vtable = slang::sys::ICastableVtable;
 	const IID: slang::UUID = slang::uuid(
-		0x8f241361,
-		0xf5bd,
-		0x4ca0,
-		[0xa3, 0xac, 0x02, 0xf7, 0xfa, 0x24, 0x02, 0xb8],
+		0x87ede0e1,
+		0x4852,
+		0x44b0,
+		[0x8b, 0xf2, 0xcb, 0x31, 0x87, 0x4d, 0xe2, 0x39],
 	);
 }
 
@@ -122,7 +123,7 @@ unsafe impl slang::Interface for Castable {
 struct ISlangFileSystemVtable {
 	unknown: sys::ISlangUnknown__bindgen_vtable,
 	cast_as:
-		unsafe extern "C" fn(this: *mut sys::ISlangCastable, guid: &slang::UUID) -> *mut c_void,
+		unsafe extern "C" fn(this: *mut sys::ISlangCastable, guid: *const slang::UUID) -> *mut c_void,
 	load_file: unsafe extern "C" fn(
 		this: *mut sys::ISlangFileSystem,
 		path: *const c_char,
@@ -196,13 +197,10 @@ impl FileSystemImpl {
 
 	unsafe extern "C" fn cast_as(
 		this: *mut sys::ISlangCastable,
-		guid: &slang::UUID,
+		guid: *const slang::UUID,
 	) -> *mut c_void {
-		let mut object = ptr::null_mut();
-		if unsafe { Self::query_interface(this.cast(), guid as *const _, &mut object) } == S_OK {
-			object
-		} else {
-			ptr::null_mut()
+		unsafe {
+			cast_as_impl(this.cast(), guid, &[FILE_SYSTEM_IID, Castable::IID, slang::IUnknown::IID])
 		}
 	}
 
@@ -211,7 +209,7 @@ impl FileSystemImpl {
 		path: *const c_char,
 		out_blob: *mut *mut slang::sys::ISlangBlob,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
 			if out_blob.is_null() || path.is_null() {
 				return E_INVALIDARG;
 			}
@@ -235,6 +233,9 @@ impl FileSystemImpl {
 					}
 				}
 			}
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 }
@@ -270,7 +271,7 @@ struct ISlangFileSystemExtVtable {
 		this: *mut sys::ISlangFileSystem,
 		path: *const c_char,
 		callback: FileSystemContentsCallBack,
-		user_data: *const c_void,
+		user_data: *mut c_void,
 	) -> sys::SlangResult,
 	get_os_path_kind: unsafe extern "C" fn(this: *mut sys::ISlangFileSystem) -> OSPathKind,
 }
@@ -355,13 +356,19 @@ impl FileSystemExtImpl {
 
 	unsafe extern "C" fn cast_as(
 		this: *mut sys::ISlangCastable,
-		guid: &slang::UUID,
+		guid: *const slang::UUID,
 	) -> *mut c_void {
-		let mut object = ptr::null_mut();
-		if unsafe { Self::query_interface(this.cast(), guid as *const _, &mut object) } == S_OK {
-			object
-		} else {
-			ptr::null_mut()
+		unsafe {
+			cast_as_impl(
+				this.cast(),
+				guid,
+				&[
+					FILE_SYSTEM_EXT_IID,
+					FILE_SYSTEM_IID,
+					Castable::IID,
+					slang::IUnknown::IID,
+				],
+			)
 		}
 	}
 
@@ -376,7 +383,7 @@ impl FileSystemExtImpl {
 		path: *const c_char,
 		out_blob: *mut *mut slang::sys::ISlangBlob,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
 			if out_blob.is_null() || path.is_null() {
 				return E_INVALIDARG;
 			}
@@ -386,6 +393,9 @@ impl FileSystemExtImpl {
 				Self::box_to_blob,
 				Some(out_blob),
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
@@ -394,13 +404,19 @@ impl FileSystemExtImpl {
 		path: *const c_char,
 		out_unique_identity: *mut *mut slang::sys::ISlangBlob,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+			if out_unique_identity.is_null() || path.is_null() {
+				return E_INVALIDARG;
+			}
 			Self::io_result_to_slang(
 				Self::wrapper(this)
 					.get_file_unique_identity(&CStr::from_ptr(path).to_string_lossy()),
 				Self::string_to_blob,
 				Some(out_unique_identity),
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
@@ -411,7 +427,10 @@ impl FileSystemExtImpl {
 		path: *const c_char,
 		path_out: *mut *mut slang::sys::ISlangBlob,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+			if path_out.is_null() || from_path.is_null() || path.is_null() {
+				return E_INVALIDARG;
+			}
 			Self::io_result_to_slang(
 				Self::wrapper(this).calc_combined_path(
 					from_path_type,
@@ -421,6 +440,9 @@ impl FileSystemExtImpl {
 				Self::string_to_blob,
 				Some(path_out),
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
@@ -429,12 +451,18 @@ impl FileSystemExtImpl {
 		path: *const c_char,
 		path_type_out: *mut SlangPathType,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+			if path_type_out.is_null() || path.is_null() {
+				return E_INVALIDARG;
+			}
 			Self::io_result_to_slang(
 				Self::wrapper(this).get_path_type(&CStr::from_ptr(path).to_string_lossy()),
 				std::convert::identity,
 				Some(path_type_out),
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
@@ -444,27 +472,36 @@ impl FileSystemExtImpl {
 		path: *const c_char,
 		out_path: *mut *mut slang::sys::ISlangBlob,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+			if out_path.is_null() || path.is_null() {
+				return E_INVALIDARG;
+			}
 			Self::io_result_to_slang(
 				Self::wrapper(this).get_path(kind, &CStr::from_ptr(path).to_string_lossy()),
 				Self::string_to_blob,
 				Some(out_path),
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
 	unsafe extern "C" fn clear_cache(this: *mut sys::ISlangFileSystem) {
-		unsafe {
+		let _ = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
 			Self::wrapper(this).clear_cache();
-		}
+		}));
 	}
 	unsafe extern "C" fn enumerate_path_contents(
 		this: *mut sys::ISlangFileSystem,
 		path: *const c_char,
 		callback: FileSystemContentsCallBack,
-		user_data: *const c_void,
+		user_data: *mut c_void,
 	) -> sys::SlangResult {
-		unsafe {
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+			if path.is_null() {
+				return E_INVALIDARG;
+			}
 			Self::io_result_to_slang::<(), (), _>(
 				Self::wrapper(this).enumerate_path_contents(
 					&CStr::from_ptr(path).to_string_lossy(),
@@ -479,18 +516,25 @@ impl FileSystemExtImpl {
 				std::convert::identity,
 				None,
 			)
+		})) {
+			Ok(v) => v,
+			Err(_) => E_CANNOT_OPEN,
 		}
 	}
 
 	unsafe extern "C" fn get_os_path_kind(this: *mut sys::ISlangFileSystem) -> OSPathKind {
-		unsafe { Self::wrapper(this).get_os_path_kind() }
+		match panic::catch_unwind(AssertUnwindSafe(|| unsafe { Self::wrapper(this).get_os_path_kind() }))
+		{
+			Ok(v) => v,
+			Err(_) => OSPathKind::None,
+		}
 	}
 
 	fn string_to_blob(s: String) -> *mut shader_slang_sys::ISlangBlob {
 		unsafe {
-			let blob = s.as_bytes();
+			let blob = CString::new(s).expect("path/identity strings must not contain NUL");
 			// *Copy* the data into a Slang-owned blob.
-			slang::sys::slang_createBlob(blob.as_ptr().cast(), blob.len())
+			slang::sys::slang_createBlob(blob.as_ptr().cast(), blob.as_bytes_with_nul().len())
 		}
 	}
 
@@ -508,6 +552,10 @@ impl FileSystemExtImpl {
 		out_blob: Option<*mut SR>,
 	) -> i32 {
 		unsafe {
+			if let Some(out_blob) = out_blob {
+				out_blob.write(mem::zeroed());
+			}
+
 			match res {
 				Ok(blob) => {
 					let blob = map_result(blob);
@@ -544,6 +592,32 @@ const E_INVALIDARG: sys::SlangResult = -2147024809;
 const E_NOINTERFACE: sys::SlangResult = -2147467262;
 const E_CANNOT_OPEN: sys::SlangResult = slang_make_core_error(4);
 const E_NOT_FOUND: sys::SlangResult = slang_make_core_error(5);
+
+unsafe fn cast_as_impl(
+	this: *mut sys::ISlangUnknown,
+	uuid: *const slang::UUID,
+	supported_interfaces: &[slang::UUID],
+) -> *mut c_void {
+	unsafe {
+		if uuid.is_null() {
+			return ptr::null_mut();
+		}
+
+		let lhs = slice::from_raw_parts(uuid.cast::<u8>(), mem::size_of::<slang::UUID>());
+		for iface in supported_interfaces {
+			let rhs = slice::from_raw_parts(
+				(iface as *const slang::UUID).cast::<u8>(),
+				mem::size_of::<slang::UUID>(),
+			);
+			if lhs == rhs {
+				// castAs is non-refcounting by contract.
+				return this.cast();
+			}
+		}
+
+		ptr::null_mut()
+	}
+}
 
 unsafe fn query_interface_impl(
 	this: *mut sys::ISlangUnknown,
