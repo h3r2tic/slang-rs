@@ -43,8 +43,6 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Ensure Ninja is available
-        run: brew install ninja
       - name: Build macOS archives
         run: ./slang-sys/slang-builder/build-macos.sh
       - name: Upload macOS archives
