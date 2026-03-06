@@ -9,6 +9,7 @@ env:
   SLANG_COMMIT: 1b4db085
   SLANG_BUILD_JOBS: 8
   GCC_TOOLSET_VERSION: 10
+  SLANG_CMAKE_TOOLSET: ClangCL
 
 jobs:
   linux:
