@@ -1,0 +1,54 @@
+name: Build Prebuilt Slang Libs
+
+on:
+  workflow_dispatch:
+
+env:
+  SLANG_REPO_URL: https://github.com/h3r2tic/slang.git
+  SLANG_REPO_BRANCH: fixes
+  SLANG_COMMIT: 1b4db085
+  SLANG_BUILD_JOBS: 8
+  GCC_TOOLSET_VERSION: 10
+
+jobs:
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Linux archives
+        run: ./slang-sys/slang-builder/build.sh
+      - name: Upload Linux archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: slang-lib-x86_64-unknown-linux-gnu
+          path: slang-sys/slang/lib/x86_64-unknown-linux-gnu/*
+
+  windows:
+    name: Windows x86_64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Windows archives
+        shell: cmd
+        run: slang-sys\slang-builder\build.cmd
+      - name: Upload Windows archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: slang-lib-x86_64-pc-windows-msvc
+          path: slang-sys/slang/lib/x86_64-pc-windows-msvc/*
+
+  macos:
+    name: macOS arm64
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure Ninja is available
+        run: brew install ninja
+      - name: Build macOS archives
+        run: ./slang-sys/slang-builder/build-macos.sh
+      - name: Upload macOS archives
+        uses: actions/upload-artifact@v4
+        with:
+          name: slang-lib-aarch64-apple-darwin
+          path: slang-sys/slang/lib/aarch64-apple-darwin/*
