@@ -30,7 +30,7 @@ git checkout "%SLANG_COMMIT%" || exit /b 1
 git submodule sync || exit /b 1
 git submodule update --init --recursive || exit /b 1
 
-cmake -B build -G "%SLANG_CMAKE_GENERATOR%" -A "%SLANG_CMAKE_ARCH%" -DCMAKE_BUILD_TYPE=Release -DSLANG_LIB_TYPE=STATIC -DSLANG_ENABLE_DXIL=0 -DSLANG_ENABLE_SLANGD=0 -DSLANG_ENABLE_SLANGI=0 -DSLANG_ENABLE_SLANGRT=0 -DSLANG_ENABLE_SLANG_GLSLANG=0 -DSLANG_ENABLE_TESTS=0 -DSLANG_ENABLE_RELEASE_DEBUG_INFO=0 -DSLANG_ENABLE_EXAMPLES=0 -DSLANG_ENABLE_SLANG_RHI=0 -DSLANG_SLANG_LLVM_FLAVOR=DISABLE || exit /b 1
+cmake -B build -G "%SLANG_CMAKE_GENERATOR%" -A "%SLANG_CMAKE_ARCH%" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_DEFAULT_CMP0141=NEW -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT= -DSLANG_LIB_TYPE=STATIC -DSLANG_ENABLE_DXIL=0 -DSLANG_ENABLE_SLANGD=0 -DSLANG_ENABLE_SLANGI=0 -DSLANG_ENABLE_SLANGRT=0 -DSLANG_ENABLE_SLANG_GLSLANG=0 -DSLANG_ENABLE_TESTS=0 -DSLANG_ENABLE_RELEASE_DEBUG_INFO=0 -DSLANG_ENABLE_EXAMPLES=0 -DSLANG_ENABLE_SLANG_RHI=0 -DSLANG_SLANG_LLVM_FLAVOR=DISABLE || exit /b 1
 cmake --build build --config Release --parallel %SLANG_BUILD_JOBS% || exit /b 1
 popd
 
@@ -42,6 +42,11 @@ copy "%SLANG_DIR%\build\Release\lib\core.lib" "%OUTPUT_DIR%\" || exit /b 1
 copy "%SLANG_DIR%\build\Release\lib\slang-compiler.lib" "%OUTPUT_DIR%\" || exit /b 1
 copy "%SLANG_DIR%\build\external\lz4\build\cmake\Release\lz4.lib" "%OUTPUT_DIR%\" || exit /b 1
 copy "%SLANG_DIR%\build\external\miniz\Release\miniz.lib" "%OUTPUT_DIR%\" || exit /b 1
+
+where llvm-strip >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    for %%F in ("%OUTPUT_DIR%\*.lib") do llvm-strip -g "%%~fF"
+)
 
 if "%OWN_WORK_DIR%"=="1" rmdir /s /q "%WORK_DIR%"
 

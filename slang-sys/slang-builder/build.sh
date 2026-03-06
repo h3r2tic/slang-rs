@@ -49,4 +49,8 @@ for artifact in "${artifacts[@]}"; do
     "${CONTAINER_RUNTIME}" cp "${CONTAINER_ID}:${artifact}" "${OUTPUT_DIR}/"
 done
 
+if command -v strip >/dev/null 2>&1; then
+    strip --strip-debug "${OUTPUT_DIR}"/*.a || true
+fi
+
 echo "Build artifacts have been copied to ${OUTPUT_DIR}"

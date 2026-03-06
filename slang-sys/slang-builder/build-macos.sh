@@ -69,4 +69,8 @@ for artifact in "${artifacts[@]}"; do
     cp "${artifact}" "${OUTPUT_DIR}/"
 done
 
+if command -v strip >/dev/null 2>&1; then
+    strip -S "${OUTPUT_DIR}"/*.a || true
+fi
+
 echo "Build artifacts have been copied to ${OUTPUT_DIR}"
