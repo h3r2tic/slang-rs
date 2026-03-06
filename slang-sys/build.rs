@@ -5,12 +5,14 @@ use std::{env, path::PathBuf};
 fn main() {
 	let manifest_dir =
 		PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
+	let target = env::var("TARGET").expect("TARGET is not set");
 
-	#[cfg(target_os = "linux")]
-	let lib_dir = manifest_dir.join("slang/lib/x86_64-unknown-linux-gnu");
-
-	#[cfg(target_os = "windows")]
-	let lib_dir = manifest_dir.join("slang/lib/x86_64-pc-windows-msvc");
+	let lib_dir = match target.as_str() {
+		"x86_64-unknown-linux-gnu" => manifest_dir.join("slang/lib/x86_64-unknown-linux-gnu"),
+		"x86_64-pc-windows-msvc" => manifest_dir.join("slang/lib/x86_64-pc-windows-msvc"),
+		"aarch64-apple-darwin" => manifest_dir.join("slang/lib/aarch64-apple-darwin"),
+		_ => panic!("unsupported target `{target}`"),
+	};
 
 	println!("cargo:rustc-link-search=native={}", lib_dir.display());
 
@@ -20,8 +22,11 @@ fn main() {
 	println!("cargo:rustc-link-lib=static=miniz");
 	println!("cargo:rustc-link-lib=static=lz4");
 
-	#[cfg(not(target_os = "windows"))]
-	println!("cargo:rustc-link-lib=stdc++");
+	if target.contains("linux") {
+		println!("cargo:rustc-link-lib=stdc++");
+	} else if target.contains("apple-darwin") {
+		println!("cargo:rustc-link-lib=c++");
+	}
 
 	let out_dir = env::var("OUT_DIR").expect("Couldn't determine output directory.");
 	let include_dir = "./slang/include";

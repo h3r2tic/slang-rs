@@ -1,22 +1,48 @@
-git clone https://github.com/h3r2tic/slang.git --recursive --single-branch --branch fixes
-cd slang
-git checkout 1b4db085
-git submodule sync
-git submodule update --init --recursive
-cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DSLANG_LIB_TYPE=STATIC -DSLANG_ENABLE_DXIL=0 -DSLANG_ENABLE_SLANGD=0 -DSLANG_ENABLE_SLANGI=0 -DSLANG_ENABLE_SLANGRT=0 -DSLANG_ENABLE_SLANG_GLSLANG=0 -DSLANG_ENABLE_TESTS=0 -DSLANG_ENABLE_RELEASE_DEBUG_INFO=0 -DSLANG_ENABLE_EXAMPLES=0 -DSLANG_ENABLE_SLANG_RHI=0 -DSLANG_SLANG_LLVM_FLAVOR=DISABLE
-cmake --build build --parallel
+@echo off
+setlocal
 
-rem The regular install process fails, so let's just grab the libs we need.
-rem cmake --install build --prefix ../slang-install
+set "SCRIPT_DIR=%~dp0"
+for %%I in ("%SCRIPT_DIR%..") do set "CRATE_DIR=%%~fI"
+set "OUTPUT_DIR=%CRATE_DIR%\slang\lib\x86_64-pc-windows-msvc"
 
-rmdir /s /q ..\..\slang\lib\x86_64-pc-windows-msvc
-mkdir ..\..\slang\lib\x86_64-pc-windows-msvc
-rem copy build\Release\lib\*.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\Release\lib\compiler-core.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\Release\lib\core.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\Release\lib\slang-compiler.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\external\lz4\build\cmake\lz4.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
-copy build\external\miniz\miniz.lib ..\..\slang\lib\x86_64-pc-windows-msvc\
+if not defined SLANG_REPO_URL set "SLANG_REPO_URL=https://github.com/h3r2tic/slang.git"
+if not defined SLANG_REPO_BRANCH set "SLANG_REPO_BRANCH=fixes"
+if not defined SLANG_COMMIT set "SLANG_COMMIT=1b4db085"
+if not defined SLANG_BUILD_JOBS set "SLANG_BUILD_JOBS=8"
+if not defined SLANG_CMAKE_GENERATOR set "SLANG_CMAKE_GENERATOR=Visual Studio 17 2022"
+if not defined SLANG_CMAKE_ARCH set "SLANG_CMAKE_ARCH=x64"
+if not defined WORK_DIR (
+    set "WORK_DIR=%TEMP%\slang-builder-%RANDOM%%RANDOM%"
+    set "OWN_WORK_DIR=1"
+) else (
+    set "OWN_WORK_DIR=0"
+)
 
-cd ..
-rmdir /s /q slang
+set "SLANG_DIR=%WORK_DIR%\slang"
+
+if exist "%WORK_DIR%" rmdir /s /q "%WORK_DIR%"
+mkdir "%WORK_DIR%" || exit /b 1
+
+git clone --recursive --single-branch --branch "%SLANG_REPO_BRANCH%" "%SLANG_REPO_URL%" "%SLANG_DIR%" || exit /b 1
+
+pushd "%SLANG_DIR%" || exit /b 1
+git checkout "%SLANG_COMMIT%" || exit /b 1
+git submodule sync || exit /b 1
+git submodule update --init --recursive || exit /b 1
+
+cmake -B build -G "%SLANG_CMAKE_GENERATOR%" -A "%SLANG_CMAKE_ARCH%" -DCMAKE_BUILD_TYPE=Release -DSLANG_LIB_TYPE=STATIC -DSLANG_ENABLE_DXIL=0 -DSLANG_ENABLE_SLANGD=0 -DSLANG_ENABLE_SLANGI=0 -DSLANG_ENABLE_SLANGRT=0 -DSLANG_ENABLE_SLANG_GLSLANG=0 -DSLANG_ENABLE_TESTS=0 -DSLANG_ENABLE_RELEASE_DEBUG_INFO=0 -DSLANG_ENABLE_EXAMPLES=0 -DSLANG_ENABLE_SLANG_RHI=0 -DSLANG_SLANG_LLVM_FLAVOR=DISABLE || exit /b 1
+cmake --build build --config Release --parallel %SLANG_BUILD_JOBS% || exit /b 1
+popd
+
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%" || exit /b 1
+
+copy "%SLANG_DIR%\build\Release\lib\compiler-core.lib" "%OUTPUT_DIR%\" || exit /b 1
+copy "%SLANG_DIR%\build\Release\lib\core.lib" "%OUTPUT_DIR%\" || exit /b 1
+copy "%SLANG_DIR%\build\Release\lib\slang-compiler.lib" "%OUTPUT_DIR%\" || exit /b 1
+copy "%SLANG_DIR%\build\external\lz4\build\cmake\Release\lz4.lib" "%OUTPUT_DIR%\" || exit /b 1
+copy "%SLANG_DIR%\build\external\miniz\Release\miniz.lib" "%OUTPUT_DIR%\" || exit /b 1
+
+if "%OWN_WORK_DIR%"=="1" rmdir /s /q "%WORK_DIR%"
+
+echo Build artifacts have been copied to %OUTPUT_DIR%
