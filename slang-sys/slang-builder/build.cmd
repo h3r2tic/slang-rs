@@ -7,7 +7,7 @@ set "OUTPUT_DIR=%CRATE_DIR%\slang\lib\x86_64-pc-windows-msvc"
 
 if not defined SLANG_REPO_URL set "SLANG_REPO_URL=https://github.com/h3r2tic/slang.git"
 if not defined SLANG_REPO_BRANCH set "SLANG_REPO_BRANCH=fixes"
-if not defined SLANG_COMMIT set "SLANG_COMMIT=1b4db085"
+if not defined SLANG_COMMIT set "SLANG_COMMIT=e26bd08d724c0ec2d56cee5383b4e1a8b128d160"
 if not defined SLANG_BUILD_JOBS set "SLANG_BUILD_JOBS=8"
 if not defined SLANG_CMAKE_GENERATOR set "SLANG_CMAKE_GENERATOR=Visual Studio 17 2022"
 if not defined SLANG_CMAKE_ARCH set "SLANG_CMAKE_ARCH=x64"
